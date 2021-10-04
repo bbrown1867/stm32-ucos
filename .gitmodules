@@ -1,0 +1,12 @@
+[submodule "uC-Lib"]
+	path = uC-Lib
+	url = https://github.com/weston-embedded/uC-LIB.git
+[submodule "uC-CPU"]
+	path = uC-CPU
+	url = https://github.com/weston-embedded/uC-CPU.git
+[submodule "BSP/ST/STM32F7xx_Nucleo_144/STM32CubeF7"]
+	path = BSP/ST/STM32F7xx_Nucleo_144/STM32CubeF7
+	url = https://github.com/STMicroelectronics/STM32CubeF7.git
+[submodule "uC-OS3"]
+	path = uC-OS3
+	url = https://github.com/weston-embedded/uC-OS3.git
