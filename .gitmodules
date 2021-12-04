@@ -10,3 +10,6 @@
 [submodule "uC-OS3"]
 	path = uC-OS3
 	url = https://github.com/weston-embedded/uC-OS3.git
+[submodule "BSP/ST/STM32F7xx_Nucleo_144/WeatherShield/MS8607_Generic_C_Driver"]
+	path = BSP/ST/STM32F7xx_Nucleo_144/WeatherShield/MS8607_Generic_C_Driver
+	url = https://github.com/TEConnectivity/MS8607_Generic_C_Driver.git

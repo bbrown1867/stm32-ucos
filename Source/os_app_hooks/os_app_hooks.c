@@ -125,7 +125,7 @@ void  App_OS_ClrAllHooks (void)
 
 void  App_OS_IdleTaskHook (void)
 {
-
+    /* TODO: Enter low-power mode */
 }
 
 /*

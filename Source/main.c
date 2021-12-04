@@ -5,48 +5,58 @@
  */
 
 #include <app_task.h>
+#include <logger_task.h>
+
 #include <os.h>
+
 #include <stddef.h>
+#include <stdbool.h>
+
+static void main_error_handler(bool expected)
+{
+    if (expected == false)
+    {
+        /*
+         * Have not initializated RTOS or BSP yet, more complex error handling
+         * is not possible at this point.
+         */
+        while (1);
+    }
+}
 
 int main(void)
 {
     OS_ERR err;
 
-    /* 
+    /*
      * Recommended to only enable interrupts after the kernel has
      * started. Also recommended to do this within the BSP layer,
      * since other CPUs may have more complex interrupt disable
-     * routines (uCOS-III The Real-Time Kernel for STM32: Page 70).
+     * routines (uCOS-III The Real-Time Kernel: Page 70).
      */
     CPU_IntDis();
-    
+
     OSInit(&err);
-    error_handler(err == OS_ERR_NONE);
+    main_error_handler(err == OS_ERR_NONE);
 
-    /* NOTE: Initialize other kernel objects here (queue, mutex, etc) */
-
-    /* 
-     * Recommended to only enable a single task initially and then enable
-     * others tasks from it (uCOS-III The Real-Time Kernel for STM32: Page 73).
+    /*
+     * Initialize other kernel objects (memory pool, queue, mutex, etc).
+     * Note that only task kernel objects are initialized here, BSP kernel
+     * objects are initialized in the BSP for better code organization.
      */
-    OSTaskCreate((OS_TCB*)      &AppTaskTCB,
-                 (CPU_CHAR*)    "Application Task",
-                 (OS_TASK_PTR)  app_task,
-                 (void*)        NULL,
-                 (OS_PRIO)      OS_CFG_APP_TASK_PRIO,
-                 (CPU_STK*)     &AppTaskStack,
-                 (CPU_STK_SIZE) OS_CFG_APP_TASK_STK_SIZE / 10,
-                 (CPU_STK_SIZE) OS_CFG_APP_TASK_STK_SIZE,
-                 (OS_MSG_QTY)   0,
-                 (OS_TICK)      0,
-                 (void*)        0,
-                 (OS_OPT)       OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR,
-                 (OS_ERR*)      &err);
-    error_handler(err == OS_ERR_NONE);
+    logger_init(&err);
+    main_error_handler(err == OS_ERR_NONE);
+
+    /*
+     * Recommended to only enable a single task initially and then enable
+     * others tasks from it (uCOS-III The Real-Time Kernel: Page 73).
+     */
+    app_create(&err);
+    main_error_handler(err == OS_ERR_NONE);
 
     /* Should not return */
     OSStart(&err);
-    error_handler(err == OS_ERR_NONE);
+    main_error_handler(err == OS_ERR_NONE);
 
     return 1;
 }
