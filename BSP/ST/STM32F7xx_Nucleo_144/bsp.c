@@ -6,7 +6,7 @@
  *         The purpose of the BSP is to keep the uCOS application (everything in "Source") platform independent,
  *         allowing you to easily port the application to a different board, processor, or architecture.
  *         I don't know if Micrium has a definitive specification for how to organize the BSP, since I've seen
- *         a variety of structures in different projects. However here are some takeaways from the user manual:
+ *         a variety of structures in different projects. However here are some takeaways from the book:
  *
  *             - Have files named bsp.c and bsp.h.
  *
@@ -14,20 +14,18 @@
  *
  *             - bsp.c seems to have the `BSP_Init`, `BSP_CPU_ClkFreq` functions.
  *
- *             - Group related functionality into files, like bsp_led.c, bsp_int.c. Have one header file,
+ *             - Group related functionality into files, like bsp_led.c, bsp_uart.c. Have one header file,
  *               bsp.h, for all public prototypes. Application code includes this file.
  *
  *             - Place RTOS funtionality that the bsp_*.c drivers use into a file called OS/uCOS-III/bsp_os.c.
  *               This would have functions like semaphore pending/posting that drivers can use on blocking calls.
+ *               This allows abstraction between the RTOS version and the BSP (e.g. uCOS-II, uCOS-III).
  *
  *             - Timestamping functionality goes into cpu_bsp.c: `CPU_TS_TmrInit`, `CPU_TS_TmrRd`. On Cortex-M
  *               this would use the CPU cycle count registers.
  *
- *         For now this implementation will be a single file since it is just an example project, but if the project
- *         grows it makes sense to follow the BSP organization described above.
- *
  *         References:
- *             - uCOS-III The Real-Time Kernel for STM32: Pages 54, 68, 361, 840
+ *             - uCOS-III The Real-Time Kernel (STM32 version, 2009): Pages 54, 70, 349, 753
  *             - Example project found on GitHub:
  *               https://github.com/ptracton/experimental/tree/master/C/STM32/RTOS/Micrium/Software/
  *
@@ -39,121 +37,7 @@
 #include <os.h>
 #include <stm32f7xx.h>
 
-static uint16_t LED_GetPin        (LED_TypeDef led);
-static void     SystemClock_Config(void);
-
-void BSP_Init(void)
-{
-    CPU_IntEn();
-    SystemClock_Config();
-    BSP_LED_Init(LED_GREEN);
-    BSP_LED_Init(LED_BLUE);
-    BSP_LED_Init(LED_RED);
-}
-
-CPU_INT32U BSP_CPU_ClkFreq(void)
-{
-    SystemCoreClockUpdate();
-    return (CPU_INT32U) SystemCoreClock;
-}
-
-void BSP_Tick_Init(void)
-{
-    OS_CPU_SysTickInitFreq(BSP_CPU_ClkFreq());
-}
-
-/*
- * LED functionality copied from stm32f7xx_nucleo_144.c in STM32CubeF7 since it doesn't make
- * sense to have two BSP files in the project.
- */
-
-void BSP_LED_Init(LED_TypeDef led)
-{
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-
-    uint16_t pin = LED_GetPin(led);
-    
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOB, pin, GPIO_PIN_RESET);
-}
-
-void BSP_LED_On(LED_TypeDef led)
-{
-    HAL_GPIO_WritePin(GPIOB, LED_GetPin(led), GPIO_PIN_SET);
-}
-
-void BSP_LED_Off(LED_TypeDef led)
-{
-    HAL_GPIO_WritePin(GPIOB, LED_GetPin(led), GPIO_PIN_RESET);
-}
-
-void BSP_LED_Toggle(LED_TypeDef led)
-{
-    HAL_GPIO_TogglePin(GPIOB, LED_GetPin(led));
-}
-
-/*
- * The HAL drivers in STM32CubeF7 package do not support an RTOS. The stm32f7xx_hal.c
- * driver will use the SysTick timer to give other drivers a way to delay/wait for a
- * fixed amount of time using HAL_GetTick and HAL_Delay. This use of the SysTick timer
- * will conflict with the RTOS use. To resolve this the file is not included in the
- * build and required implementations are placed here, using the uCOS APIs as the
- * source of time.
- *
- * More important than this inconvenience is the fact that the bus drivers won't use RTOS
- * primitives like semaphore post/pend for blocking operations. Unclear if or how this
- * STM32CubeF7 package could be used in a more complex RTOS system. Perhaps people build
- * their own drivers instead, possibly using the low-level drivers, or Micrium has an
- * STM32 BSP somewhere.
- *
- * There is a USE_RTOS macro in stm32f7xx_hal_conf.h, so maybe a future or different
- * release of the STM32CubeF7 package does provide the necessary support.
- */
-
-uint32_t uwTickPrio;
-
-HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
-{
-    /* 
-     * Called by HAL_RCC_ClockConfig to reconfigure the system tick after clock settings
-     * have changed. This can be a "no-op" for us since we only call HAL_RCC_ClockConfig
-     * once in SystemClock_Config and then configure the tick in BSP_Tick_Init after
-     * using the up-to-date clock settings.
-     */
-    return HAL_OK;
-}
-
-uint32_t HAL_GetTick(void)
-{
-    OS_ERR err;
-    return OSTimeGet(&err);
-}
-
-/*
- * Private functions.
- */
-
-static uint16_t LED_GetPin(LED_TypeDef led)
-{
-    if (led == LED_GREEN)
-    {
-        return GPIO_PIN_0;
-    }
-    else if (led == LED_RED)
-    {
-        return GPIO_PIN_7;
-    }
-    else
-    {
-        return GPIO_PIN_14;
-    }
-}
+#include <stdint.h>
 
 static void SystemClock_Config(void)
 {
@@ -189,4 +73,84 @@ static void SystemClock_Config(void)
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
     HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7);
+}
+
+BSP_RESULT BSP_Init(void)
+{
+    SCB_EnableICache();
+    SCB_EnableDCache();
+
+    CPU_IntEn();
+    SystemClock_Config();
+
+    if (BSP_LED_Init() != BSP_SUCCESS)
+    {
+        return BSP_FAILURE;
+    }
+
+    if (BSP_Sensor_Init() != BSP_SUCCESS)
+    {
+        return BSP_FAILURE;
+    }
+
+    if (BSP_UART_Init() != BSP_SUCCESS)
+    {
+        return BSP_FAILURE;
+    }
+
+    return BSP_SUCCESS;
+}
+
+CPU_INT32U BSP_CPU_ClkFreq(void)
+{
+    SystemCoreClockUpdate();
+
+    return (CPU_INT32U) SystemCoreClock;
+}
+
+void BSP_Tick_Init(void)
+{
+    OS_CPU_SysTickInitFreq(BSP_CPU_ClkFreq());
+}
+
+/*
+ * STM32 HAL functions.
+ *
+ * NOTE:
+ *
+ *     The HAL drivers in STM32CubeF7 package do not support an RTOS. The stm32f7xx_hal.c
+ *     driver will use the SysTick timer to give other drivers a way to delay/wait for a
+ *     fixed amount of time using HAL_GetTick and HAL_Delay. This use of the SysTick timer
+ *     will conflict with the RTOS use. To resolve this the file is not included in the
+ *     build and required implementations are placed here, using the uCOS APIs as the
+ *     source of time.
+ *
+ *     More important than this inconvenience is the fact that the bus drivers won't use RTOS
+ *     primitives like semaphore post/pend for blocking operations. Unclear if or how this
+ *     STM32CubeF7 package could be used in a more complex RTOS system. Perhaps people build
+ *     their own BSP and STM32CubeF7 is just a reference or maybe Micrium and/or STM have
+ *     an RTOS-aware STM32 BSP somewhere.
+ *
+ *     There is a USE_RTOS macro in stm32f7xx_hal_conf.h but it is unused and unsupported.
+ */
+
+uint32_t uwTickPrio;
+
+HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+    /*
+     * Called by HAL_RCC_ClockConfig to reconfigure the system tick after clock settings
+     * have changed. This can be a "no-op" for us since we only call HAL_RCC_ClockConfig
+     * once in SystemClock_Config and then configure the tick in BSP_Tick_Init after
+     * using the up-to-date clock settings.
+     */
+    return HAL_OK;
+}
+
+uint32_t HAL_GetTick(void)
+{
+    /* Ignore errors */
+    OS_ERR err;
+
+    return (uint32_t) OSTimeGet(&err);
 }

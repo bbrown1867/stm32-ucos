@@ -82,10 +82,43 @@
 **************************************************************************************************************************
 */
 
+/*
+ * Notes on priorities:
+ *     - 0 is the highest priority level.
+ *     - (OS_CFG_PRIO_MAX - 1) is the lowest priority level.
+ *     - Multiple tasks can use the same priority level (round-robin).
+ *
+ * Internal tasks:
+ *     - Idle task is lowest priority: (OS_CFG_PRIO_MAX - 1), no other task may use this priority level.
+ *     - Stats task is second lowest priority: (OS_CFG_PRIO_MAX - 2), but this could be changed.
+ *     - Timer task is third lowest priority: (OS_CFG_PRIO_MAX - 3), but this could be changed.
+ *     - Tick task is usually set to a high priority (uCOS-III The Real-Time Kernel: Page 122),
+ *       however the OS_CFG_TICK_TASK_PRIO macro does not appear anywhere in the uCOS source code
+ *       so maybe this internal task has been deprecated.
+ */
+
                                                                 /* ----------------- APPLICATION TASK ----------------- */
                                                                 /* Priority of 'Application Task'                       */
-#define  OS_CFG_APP_TASK_PRIO   ((OS_PRIO)(OS_CFG_PRIO_MAX-4u))
+#define  OS_CFG_APP_TASK_PRIO                    ((OS_PRIO) 0)
                                                                 /* Stack size (number of CPU_STK elements)              */
-#define  OS_CFG_APP_TASK_STK_SIZE                        128u
+#define  OS_CFG_APP_TASK_STK_SIZE                        512u
+                                                                /* Polling interval (in number of OS_TICK elements)     */
+#define  OS_CFG_APP_TASK_POLLING_INTERVAL               1000u
+
+                                                                /* -------------------- LOGGER TASK ------------------- */
+                                                                /* Priority of 'Logger Task'                            */
+#define  OS_CFG_LOGGER_TASK_PRIO                 ((OS_PRIO) 2)
+                                                                /* Stack size (number of CPU_STK elements)              */
+#define  OS_CFG_LOGGER_TASK_STK_SIZE                     512u
+                                                                /* Task message queue size for 'Logger Task'            */
+#define  OS_CFG_LOGGER_TASK_QUEUE_SIZE                    20u
+
+                                                                /* -------------------- SENSOR TASK ------------------- */
+                                                                /* Priority of 'Sensor Task'                            */
+#define  OS_CFG_SENSOR_TASK_PRIO                 ((OS_PRIO) 1)
+                                                                /* Stack size (number of CPU_STK elements)              */
+#define  OS_CFG_SENSOR_TASK_STK_SIZE                     512u
+                                                                /* Polling interval (in number of OS_TICK elements)     */
+#define  OS_CFG_SENSOR_TASK_POLLING_INTERVAL            1000u
 
 #endif

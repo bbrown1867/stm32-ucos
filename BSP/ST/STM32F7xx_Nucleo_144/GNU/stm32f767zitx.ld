@@ -32,7 +32,12 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-/* uCOS Bindings */
+/*
+    Bind uCOS-III SysTick and PendSV handlers to interrupt vector table locations.
+
+    Reference:
+        - uCOS-III The Real-Time Kernel (STM32 version, 2009): Pages 747, 751
+ */
 PendSV_Handler = OS_CPU_PendSVHandler;
 SysTick_Handler = OS_CPU_SysTickHandler;
 
